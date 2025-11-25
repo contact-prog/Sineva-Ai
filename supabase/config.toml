@@ -1,0 +1,274 @@
+project_id = "apxigjramwlzjifjesph"
+
+[functions.plan-video-scenes]
+verify_jwt = true
+
+[functions.generate-video-simple]
+verify_jwt = true
+
+[functions.check-video-status]
+verify_jwt = true
+
+[functions.generate-scene-images]
+verify_jwt = true
+
+[functions.generate-video-clips]
+verify_jwt = true
+
+[functions.generate-video-clips-direct]
+verify_jwt = true
+timeout_sec = 300
+memory_mb = 512
+
+[functions.generate-video-audio]
+verify_jwt = true
+
+[functions.assemble-final-videos]
+verify_jwt = true
+
+[functions.social-auth-initiate]
+verify_jwt = true
+
+[functions.social-auth-callback]
+verify_jwt = true
+
+[functions.social-refresh-token]
+verify_jwt = true
+
+[functions.post-to-facebook]
+verify_jwt = true
+
+[functions.post-to-instagram]
+verify_jwt = true
+
+[functions.post-to-twitter]
+verify_jwt = true
+
+[functions.post-to-linkedin]
+verify_jwt = true
+
+[functions.publish-social-post]
+verify_jwt = true
+
+[functions.get-social-accounts]
+verify_jwt = true
+
+[functions.get-social-stats]
+verify_jwt = true
+
+[functions.sync-social-engagement]
+verify_jwt = true
+
+[functions.process-scheduled-posts]
+verify_jwt = false
+
+[functions.optimize-social-content]
+verify_jwt = true
+
+[functions.generate-email-content]
+verify_jwt = false
+
+[functions.generate-content]
+verify_jwt = true
+
+[functions.edit-content]
+verify_jwt = true
+
+[functions.generate-content-variations]
+verify_jwt = true
+
+[functions.analyze-seo]
+verify_jwt = true
+
+[functions.send-email]
+verify_jwt = false
+
+[functions.send-auth-email]
+verify_jwt = false
+
+[functions.parse-email-list]
+verify_jwt = false
+
+[functions.scrape-website]
+verify_jwt = false
+
+[functions.enhance-description]
+verify_jwt = false
+
+[functions.analyze-industry]
+verify_jwt = false
+
+[functions.chat-orchestrator]
+verify_jwt = false
+
+[functions.generate-graphic]
+verify_jwt = false
+
+[functions.edit-graphic]
+verify_jwt = false
+
+[functions.translate-text]
+verify_jwt = false
+
+[functions.generate-video-story]
+verify_jwt = true
+timeout_sec = 300
+memory_mb = 512
+
+[functions.generate-video-story-automated]
+verify_jwt = true
+timeout_sec = 300
+memory_mb = 512
+
+[functions.generate-video-quick]
+verify_jwt = true
+timeout_sec = 300
+memory_mb = 512
+
+[functions.generate-story-scenes]
+verify_jwt = true
+timeout_sec = 300
+memory_mb = 512
+
+[functions.generate-and-assemble-video]
+verify_jwt = true
+timeout_sec = 300
+memory_mb = 512
+
+[functions.resend-webhook]
+verify_jwt = false
+
+[functions.retry-scene-image]
+verify_jwt = true
+
+[functions.auto-reply-email]
+verify_jwt = false
+
+[functions.process-queue-retry]
+verify_jwt = false
+
+[functions.generate-frame-image]
+verify_jwt = true
+
+[functions.edit-frame-image]
+verify_jwt = true
+
+[functions.get-scheduled-posts]
+verify_jwt = true
+
+[functions.update-scheduled-post]
+verify_jwt = true
+
+[functions.delete-scheduled-post]
+verify_jwt = true
+
+[functions.get-dashboard-analytics]
+verify_jwt = true
+
+[functions.check-usage-limit]
+verify_jwt = true
+
+[functions.increment-usage]
+verify_jwt = true
+
+[functions.generate-cross-service-suggestions]
+verify_jwt = true
+
+[functions.research-agent]
+verify_jwt = true
+
+[functions.optimize-social-content]
+verify_jwt = true
+
+[functions.generate-platform-suite]
+verify_jwt = true
+
+[functions.generate-content-recommendations]
+verify_jwt = true
+
+[functions.generate-video]
+verify_jwt = true
+timeout_sec = 300
+memory_mb = 512
+
+[functions.generate-video-from-frames]
+verify_jwt = true
+timeout_sec = 300
+memory_mb = 512
+
+[functions.repair-videos]
+verify_jwt = true
+
+[functions.enhance-prompt]
+verify_jwt = true
+
+[functions.gemini-generate-image]
+verify_jwt = true
+
+[functions.gemini-edit-image]
+verify_jwt = true
+
+[functions.delete-user-account]
+verify_jwt = true
+
+[functions.gmail-auth-initiate]
+verify_jwt = true
+
+[functions.gmail-auth-callback]
+verify_jwt = false
+
+[functions.wordpress-auth-initiate]
+verify_jwt = true
+
+[functions.wordpress-auth-callback]
+verify_jwt = true
+
+[functions.publish-to-wordpress]
+verify_jwt = true
+
+[functions.sync-wordpress-analytics]
+verify_jwt = true
+
+[functions.update-wordpress-post]
+verify_jwt = true
+
+[functions.outlook-auth-initiate]
+verify_jwt = true
+
+[functions.outlook-auth-callback]
+verify_jwt = false
+
+[functions.send-gmail]
+verify_jwt = true
+
+[functions.schedule-email]
+verify_jwt = true
+
+[functions.get-gmail-messages]
+verify_jwt = true
+
+[functions.transcribe-audio]
+verify_jwt = true
+
+[functions.generate-conversation-summary]
+verify_jwt = true
+
+[functions.regenerate-response]
+verify_jwt = true
+
+[functions.generate-onboarding-magic]
+verify_jwt = true
+timeout_sec = 90
+memory_mb = 512
+
+[functions.generate-welcome-samples]
+verify_jwt = true
+
+[functions.send-outlook]
+verify_jwt = true
+
+[functions.get-outlook-messages]
+verify_jwt = true
+
+[functions.process-scheduled-emails]
+verify_jwt = false

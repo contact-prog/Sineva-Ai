@@ -1,0 +1,50 @@
+-- Grant enterprise subscription to sargun.s@gruposineva.com
+INSERT INTO user_subscriptions (
+  user_id,
+  plan_tier,
+  status,
+  billing_period,
+  graphics_limit,
+  graphics_used,
+  videos_limit,
+  videos_used,
+  chat_limit,
+  chat_used,
+  content_limit,
+  content_used,
+  email_limit,
+  email_used,
+  current_period_start,
+  current_period_end,
+  overage_credits
+) VALUES (
+  '0fea97a6-cd1c-4346-96d4-d402b0802423',
+  'enterprise',
+  'active',
+  'monthly',
+  999999,
+  0,
+  999999,
+  0,
+  999999,
+  0,
+  999999,
+  0,
+  999999,
+  0,
+  NOW(),
+  NOW() + INTERVAL '1 year',
+  0
+)
+ON CONFLICT (user_id) 
+DO UPDATE SET
+  plan_tier = 'enterprise',
+  status = 'active',
+  graphics_limit = 999999,
+  videos_limit = 999999,
+  chat_limit = 999999,
+  content_limit = 999999,
+  email_limit = 999999,
+  current_period_start = NOW(),
+  current_period_end = NOW() + INTERVAL '1 year',
+  updated_at = NOW();

@@ -1,0 +1,345 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Base Colors - Light Mode */
+    --background: 0 0% 100%;
+    --foreground: 222 47% 11%;
+    
+    /* Primary - Soft Blue */
+    --primary: 210 55% 58%;
+    --primary-foreground: 0 0% 100%;
+    --primary-glow: 210 55% 58%;
+    
+    /* Secondary - Dark Blue-Gray */
+    --secondary: 217 33% 17%;
+    --secondary-foreground: 210 40% 98%;
+    
+    /* Accent - Neon Emerald */
+    --accent: 142 76% 36%;
+    --accent-foreground: 0 0% 100%;
+    
+    /* Accent Cyan */
+    --accent-cyan: 210 55% 58%;
+    
+    /* Success Green */
+    --success: 142 76% 36%;
+    --success-foreground: 0 0% 100%;
+    
+    /* Warning */
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 100%;
+    
+    /* Card & Surfaces */
+    --card: 220 14% 96%;
+    --card-foreground: 222 47% 11%;
+    
+    /* Glass Effect - Light Mode */
+    --glass-bg: rgba(255, 255, 255, 0.7);
+    --glass-border: rgba(14, 165, 233, 0.3);
+    --glass-blur: 16px;
+    
+    /* Border & Input */
+    --border: 220 13% 91%;
+    --input: 220 13% 91%;
+    --ring: 210 55% 58%;
+    
+    /* Muted */
+    --muted: 220 14% 96%;
+    --muted-foreground: 215 20% 65%;
+    
+    /* Destructive */
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 100%;
+    
+    /* Popover */
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+    
+    /* Sidebar - Light Mode */
+    --sidebar-background: 220 14% 96%;
+    --sidebar-foreground: 222 47% 11%;
+    --sidebar-primary: 210 55% 58%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 220 14% 96%;
+    --sidebar-accent-foreground: 222 47% 11%;
+    --sidebar-border: 220 13% 91%;
+    --sidebar-ring: 210 55% 58%;
+    
+    /* Radius */
+    --radius: 0.75rem;
+    
+    /* Gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(210, 55%, 58%), hsl(142, 76%, 36%));
+    --gradient-accent: linear-gradient(135deg, hsl(142, 76%, 36%), hsl(210, 55%, 58%));
+    
+    /* Shadows */
+    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+    --shadow-glow: 0 0 20px rgba(14, 165, 233, 0.4);
+    --shadow-glow-accent: 0 0 20px rgba(22, 163, 74, 0.4);
+    
+    /* Animations */
+    --transition-smooth: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .dark {
+    /* Base Colors - Deep Space Black */
+    --background: 222 47% 4%;
+    --foreground: 210 40% 98%;
+    
+    /* Card & Surfaces */
+    --card: 222 47% 6%;
+    --card-foreground: 210 40% 98%;
+    
+    /* Popover */
+    --popover: 222 47% 6%;
+    --popover-foreground: 210 40% 98%;
+    
+    /* Primary - Soft Blue (same) */
+    --primary: 210 55% 58%;
+    --primary-foreground: 210 40% 98%;
+    
+    /* Secondary - Dark Blue-Gray */
+    --secondary: 217 33% 17%;
+    --secondary-foreground: 210 40% 98%;
+    
+    /* Muted */
+    --muted: 217 33% 17%;
+    --muted-foreground: 215 20% 65%;
+    
+    /* Accent - Neon Emerald (same) */
+    --accent: 142 76% 36%;
+    --accent-foreground: 210 40% 98%;
+    
+    /* Destructive */
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+    
+    /* Border & Input */
+    --border: 217 33% 17%;
+    --input: 217 33% 17%;
+    --ring: 210 55% 58%;
+    
+    /* Glass Effect - Dark Mode */
+    --glass-bg: rgba(15, 23, 42, 0.7);
+    --glass-border: rgba(14, 165, 233, 0.2);
+    --glass-blur: 16px;
+    
+    /* Sidebar - Dark Mode */
+    --sidebar-background: 222 47% 6%;
+    --sidebar-foreground: 210 40% 98%;
+    --sidebar-primary: 210 55% 58%;
+    --sidebar-primary-foreground: 210 40% 98%;
+    --sidebar-accent: 217 33% 17%;
+    --sidebar-accent-foreground: 210 40% 98%;
+    --sidebar-border: 217 33% 17%;
+    --sidebar-ring: 210 55% 58%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  
+  body {
+    @apply bg-background text-foreground;
+    font-family: 'DM Sans', system-ui, -apple-system, sans-serif;
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-bold;
+  }
+  
+  /* Typography Scale - Simplified */
+  h1 {
+    @apply text-4xl md:text-5xl lg:text-6xl font-semibold;
+    line-height: 1.2;
+  }
+  
+  h2 {
+    @apply text-3xl md:text-4xl font-semibold;
+    line-height: 1.3;
+  }
+  
+  h3 {
+    @apply text-2xl md:text-3xl font-medium;
+    line-height: 1.4;
+  }
+  
+  h4 {
+    @apply text-xl font-medium;
+    line-height: 1.5;
+  }
+  
+  /* Standard Text Sizes */
+  .text-display {
+    @apply text-5xl md:text-6xl font-bold;
+  }
+  
+  .text-heading {
+    @apply text-3xl md:text-4xl font-semibold;
+  }
+  
+  .text-subheading {
+    @apply text-xl md:text-2xl font-medium;
+  }
+  
+  .text-body {
+    @apply text-base;
+  }
+  
+  .text-caption {
+    @apply text-sm text-muted-foreground;
+  }
+}
+
+@layer utilities {
+  /* Minimal Card Styles */
+  .card-minimal {
+    @apply bg-card border border-border/30 rounded-lg shadow-sm;
+  }
+  
+  .border-subtle {
+    @apply border-border/30;
+  }
+  
+  /* Simple Hover Effects */
+  .hover-lift {
+    @apply transition-shadow duration-200;
+  }
+  
+  .hover-lift:hover {
+    @apply shadow-md;
+  }
+  
+  .gradient-text {
+    background: var(--gradient-primary);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  
+  /* Brain-themed animations */
+  .brain-pulse {
+    animation: brain-pulse 2s ease-in-out infinite;
+  }
+  
+  @keyframes brain-pulse {
+    0%, 100% {
+      opacity: 1;
+      transform: scale(1);
+    }
+    50% {
+      opacity: 0.8;
+      transform: scale(1.05);
+    }
+  }
+  
+  .brain-glow {
+    background: radial-gradient(circle, rgba(14, 165, 233, 0.3) 0%, transparent 70%);
+    animation: brain-glow 3s ease-in-out infinite;
+    pointer-events: none;
+  }
+  
+  .brain-glow-large {
+    background: radial-gradient(circle, rgba(14, 165, 233, 0.2) 0%, transparent 70%);
+    animation: brain-glow 3s ease-in-out infinite;
+    pointer-events: none;
+    transform: scale(1.5);
+  }
+  
+  @keyframes brain-glow {
+    0%, 100% {
+      opacity: 0.5;
+    }
+    50% {
+      opacity: 1;
+    }
+  }
+
+  /* Calendar Styles */
+  .rbc-calendar {
+    @apply bg-card text-foreground;
+  }
+  
+  .rbc-header {
+    @apply bg-muted text-foreground font-semibold py-3 border-b border-border;
+  }
+  
+  .rbc-today {
+    @apply bg-primary/10;
+  }
+  
+  .rbc-event {
+    @apply bg-primary text-primary-foreground rounded-md px-2 py-1 border-none;
+  }
+  
+  .rbc-event.rbc-selected {
+    @apply bg-primary ring-2 ring-ring;
+  }
+  
+  .rbc-time-slot {
+    @apply border-border;
+  }
+  
+  .rbc-day-slot .rbc-time-slot {
+    @apply border-t border-border;
+  }
+  
+  .rbc-current-time-indicator {
+    @apply bg-primary;
+  }
+  
+  .rbc-toolbar button {
+    @apply bg-card text-foreground border border-border rounded-md px-3 py-2 hover:bg-accent transition-colors;
+  }
+  
+  .rbc-toolbar button.rbc-active {
+    @apply bg-primary text-primary-foreground;
+  }
+  
+  .rbc-off-range-bg {
+    @apply bg-muted/30;
+  }
+  
+  .rbc-agenda-view {
+    @apply bg-card border border-border rounded-lg;
+  }
+  
+  .rbc-agenda-table {
+    @apply border-border;
+  }
+  
+  .rbc-agenda-date-cell,
+  .rbc-agenda-time-cell {
+    @apply text-foreground;
+  }
+  
+  .rbc-agenda-event-cell {
+    @apply text-foreground;
+  }
+
+  /* Custom scrollbar */
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background: hsl(var(--border));
+    border-radius: 3px;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--border) / 0.8);
+  }
+}
