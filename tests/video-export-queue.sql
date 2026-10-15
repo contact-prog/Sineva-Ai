@@ -1,0 +1,36 @@
+BEGIN;
+DO $$
+DECLARE generation uuid := gen_random_uuid(); job uuid; duplicate uuid;
+  claimed public.video_export_jobs; stale uuid := gen_random_uuid(); result boolean;
+  outputs jsonb := '[{"platform":"youtube","url":"https://storage.test/video.mp4","thumbnailUrl":"https://storage.test/thumbnail.jpg"}]';
+BEGIN
+  INSERT INTO video_generations(id,user_id,status) VALUES (generation,gen_random_uuid(),'videos_generated');
+  job := enqueue_video_export(generation,'{}');
+  duplicate := enqueue_video_export(generation,'{}');
+  IF job <> duplicate THEN RAISE EXCEPTION 'Duplicate active job'; END IF;
+  IF (SELECT status FROM video_generations WHERE id = generation) <> 'assembling' THEN RAISE EXCEPTION 'Status not assembling'; END IF;
+  SELECT * INTO claimed FROM claim_video_export();
+  IF claimed.id <> job OR claimed.attempts <> 1 OR claimed.lease_token IS NULL THEN RAISE EXCEPTION 'Claim failed'; END IF;
+  IF EXISTS (SELECT * FROM claim_video_export()) THEN RAISE EXCEPTION 'Claimed active lease twice'; END IF;
+  result := finish_video_export(job,stale,outputs,NULL);
+  IF result THEN RAISE EXCEPTION 'Accepted stale token'; END IF;
+  result := finish_video_export(job,claimed.lease_token,outputs,NULL);
+  IF NOT result OR (SELECT status FROM video_generations WHERE id = generation) <> 'completed' THEN RAISE EXCEPTION 'Not completed'; END IF;
+  IF (SELECT platform_urls->>'youtube' FROM video_generations WHERE id = generation) <> 'https://storage.test/video.mp4' THEN RAISE EXCEPTION 'URLs not saved'; END IF;
+  IF (SELECT metadata->'finalVideos' FROM video_generations WHERE id = generation) <> outputs THEN RAISE EXCEPTION 'Result not saved'; END IF;
+  job := enqueue_video_export(generation,'{}');
+  SELECT * INTO claimed FROM claim_video_export();
+  UPDATE video_export_jobs SET claimed_at = now() - interval '21 minutes' WHERE id = job;
+  SELECT * INTO claimed FROM claim_video_export();
+  IF claimed.attempts <> 2 THEN RAISE EXCEPTION 'Lease not recovered'; END IF;
+  PERFORM finish_video_export(job,claimed.lease_token,NULL,'FFmpeg failed');
+  IF (SELECT status FROM video_generations WHERE id = generation) <> 'failed' THEN RAISE EXCEPTION 'Failure not recorded'; END IF;
+  job := enqueue_video_export(generation,'{}');
+  SELECT * INTO claimed FROM claim_video_export();
+  UPDATE video_export_jobs SET claimed_at = now() - interval '21 minutes', attempts = 3 WHERE id = job;
+  PERFORM * FROM claim_video_export();
+  IF (SELECT status FROM video_export_jobs WHERE id = job) <> 'failed' THEN RAISE EXCEPTION 'Exhausted lease not failed'; END IF;
+  IF has_function_privilege('authenticated','enqueue_video_export(uuid,jsonb)','EXECUTE') THEN RAISE EXCEPTION 'Queue exposed to users'; END IF;
+  IF has_table_privilege('anon','video_export_jobs','SELECT') THEN RAISE EXCEPTION 'Jobs exposed to anonymous users'; END IF;
+END $$;
+ROLLBACK;

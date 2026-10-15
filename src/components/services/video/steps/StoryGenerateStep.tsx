@@ -1,16 +1,16 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { StoryFormData } from './StoryCustomizeStep';
 import { ScenePlanningReview } from './ScenePlanningReview';
-import { ImageGenerationReview } from './ImageGenerationReview';
 import { StoryboardReview } from './StoryboardReview';
 import { VideoClipReview } from './VideoClipReview';
-import { AudioReview } from './AudioReview';
 import { FinalAssemblyStatus } from './FinalAssemblyStatus';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { Loader2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { assemblyRequest, completedVideos, type PlatformVideo } from './videoExport';
 
 type WorkflowPhase = 
   | 'planning_scenes'
@@ -41,6 +41,15 @@ interface StoryGenerateStepProps {
   previewMode?: boolean;
 }
 
+const loadScenes = async (id: string) => {
+    const { data, error } = await supabase.from('video_story_scenes').select('*')
+      .eq('video_generation_id', id).order('scene_number');
+    if (error) throw error;
+    if (!data?.length) throw new Error('No scenes found');
+    return data as Scene[];
+  };
+
+
 export function StoryGenerateStep({ formData, onBack, onComplete, previewMode = true }: StoryGenerateStepProps) {
   const { toast } = useToast();
   const [phase, setPhase] = useState<WorkflowPhase>('planning_scenes');
@@ -50,18 +59,58 @@ export function StoryGenerateStep({ formData, onBack, onComplete, previewMode = 
   const [estimatedCost, setEstimatedCost] = useState(0);
   const [estimatedTime, setEstimatedTime] = useState(0);
   const [veoModel, setVeoModel] = useState('veo-3.1-generate-001');
-  const [voiceoverUrl, setVoiceoverUrl] = useState<string>();
-  const [musicUrl, setMusicUrl] = useState<string>();
-  const [platformVideos, setPlatformVideos] = useState<any[]>([]);
+  const [platformVideos, setPlatformVideos] = useState<PlatformVideo[]>([]);
 
-  // Phase 1: Plan Scenes
+  const [assemblyJobId, setAssemblyJobId] = useState<string | null>(null);
+  const [exportError, setExportError] = useState<string | null>(null);
+  const mounted = useRef(true);
   useEffect(() => {
-    if (phase === 'planning_scenes') {
-      planScenes();
-    }
-  }, [phase]);
+    mounted.current = true;
+    return () => { mounted.current = false; };
+  }, []);
 
-  const planScenes = async () => {
+  // Poll a durable job. Cleanup prevents updates after the dialog closes.
+  useEffect(() => {
+    if (phase !== 'assembling' || !assemblyJobId || exportError) return;
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout>;
+    const poll = async () => {
+      try {
+        const { data, error } = await supabase.functions.invoke('assemble-final-videos', {
+          body: { action: 'status', videoGenerationId, jobId: assemblyJobId },
+        });
+        if (cancelled) return;
+        if (error) throw error;
+        const videos = completedVideos(data);
+        if (videos) {
+          setPlatformVideos(videos);
+          setProgress(100);
+          setPhase('completed');
+          toast({ title: 'Videos Ready!', description: `${videos.length} videos are ready to download.` });
+          return;
+        }
+        timer = setTimeout(poll, 3000);
+      } catch (error) {
+        if (!cancelled) setExportError(error instanceof Error ? error.message : 'Could not check export status');
+      }
+    };
+    poll();
+    return () => { cancelled = true; clearTimeout(timer); };
+  }, [phase, assemblyJobId, videoGenerationId, exportError, toast]);
+
+  const waitForImages = async (id: string) => {
+    const deadline = Date.now() + 10 * 60 * 1000;
+    while (mounted.current && Date.now() < deadline) {
+      const { data, error } = await supabase.from('video_generations').select('status').eq('id', id).single();
+      if (error) throw error;
+      if (data.status === 'failed') throw new Error('Scene image generation failed');
+      if (data.status === 'images_generated') return await loadScenes(id);
+      await new Promise(resolve => setTimeout(resolve, 3000));
+    }
+    throw new Error('Image generation is still pending. Check your video library before retrying.');
+  };
+
+  const planScenes = useCallback(async () => {
     try {
       setProgress(10);
       const { data, error } = await supabase.functions.invoke('plan-video-scenes', {
@@ -75,19 +124,27 @@ export function StoryGenerateStep({ formData, onBack, onComplete, previewMode = 
 
       if (error) throw error;
 
+      const plannedScenes = await loadScenes(data.videoGenerationId);
+      if (!mounted.current) return;
       setVideoGenerationId(data.videoGenerationId);
-      setScenes(data.scenes);
+      setScenes(plannedScenes);
       setProgress(100);
       setPhase('review_scenes');
-    } catch (error: any) {
+    } catch (error) {
+      if (!mounted.current) return;
       toast({
         title: 'Scene Planning Failed',
-        description: error.message,
+        description: error instanceof Error ? error.message : 'Video generation failed',
         variant: 'destructive',
       });
       onBack();
     }
-  };
+  }, [formData.storyInput, formData.duration, formData.style, formData.includeVoiceover, toast, onBack]);
+
+  useEffect(() => {
+    if (phase === 'planning_scenes') planScenes();
+  }, [phase, planScenes]);
+
 
   const handleApproveScenesAndGenerateImages = async () => {
     setPhase('generating_images');
@@ -103,7 +160,9 @@ export function StoryGenerateStep({ formData, onBack, onComplete, previewMode = 
 
       if (error) throw error;
 
-      setScenes(data.scenes);
+      const generatedScenes = await waitForImages(videoGenerationId!);
+      if (!mounted.current) return;
+      setScenes(generatedScenes);
       setProgress(100);
       
       // If preview mode, stop here and show storyboard review
@@ -111,22 +170,23 @@ export function StoryGenerateStep({ formData, onBack, onComplete, previewMode = 
         setPhase('review_storyboard');
       } else {
         // Full video mode: continue automatically
-        handleApproveImagesAndGenerateVideos();
+        handleApproveImagesAndGenerateVideos(generatedScenes.length);
       }
-    } catch (error: any) {
+    } catch (error) {
+      if (!mounted.current) return;
       toast({
         title: 'Image Generation Failed',
-        description: error.message,
+        description: error instanceof Error ? error.message : 'Video generation failed',
         variant: 'destructive',
       });
       setPhase('review_scenes');
     }
   };
 
-  const handleApproveImagesAndGenerateVideos = async () => {
+  const handleApproveImagesAndGenerateVideos = async (sceneCount = scenes.length) => {
     // Calculate estimates
-    const cost = scenes.length * 0.48; // Approximate cost per clip
-    const time = Math.ceil(scenes.length * 2.5); // Approximate time
+    const cost = sceneCount * 0.48; // Approximate cost per clip
+    const time = Math.ceil(sceneCount * 2.5); // Approximate time
     setEstimatedCost(cost);
     setEstimatedTime(time);
     setVeoModel(formData.videoQuality === 'standard' ? 'veo-3.1-fast-001' : 'veo-3.1-generate-001');
@@ -147,7 +207,9 @@ export function StoryGenerateStep({ formData, onBack, onComplete, previewMode = 
 
       if (error) throw error;
 
-      setScenes(data.scenes);
+      const generatedScenes = await loadScenes(videoGenerationId!);
+      if (!mounted.current) return;
+      setScenes(generatedScenes);
       setProgress(100);
       
       // If audio is requested, move to audio generation, otherwise go to assembly
@@ -156,10 +218,11 @@ export function StoryGenerateStep({ formData, onBack, onComplete, previewMode = 
       } else {
         handleAssembleVideos();
       }
-    } catch (error: any) {
+    } catch (error) {
+      if (!mounted.current) return;
       toast({
         title: 'Video Generation Failed',
-        description: error.message,
+        description: error instanceof Error ? error.message : 'Video generation failed',
         variant: 'destructive',
       });
       setPhase('review_storyboard');
@@ -168,6 +231,7 @@ export function StoryGenerateStep({ formData, onBack, onComplete, previewMode = 
 
   const handleGenerateAudio = async () => {
     setPhase('generating_audio');
+    setExportError(null);
     setProgress(0);
 
     try {
@@ -183,50 +247,39 @@ export function StoryGenerateStep({ formData, onBack, onComplete, previewMode = 
 
       if (error) throw error;
 
-      setVoiceoverUrl(data.voiceoverUrl);
-      setMusicUrl(data.musicUrl);
+      if (!mounted.current) return;
       setProgress(100);
       handleAssembleVideos();
-    } catch (error: any) {
+    } catch (error) {
+      if (!mounted.current) return;
       toast({
         title: 'Audio Generation Failed',
-        description: error.message,
+        description: error instanceof Error ? error.message : 'Video generation failed',
         variant: 'destructive',
       });
+      setExportError(error instanceof Error ? error.message : 'Audio generation failed');
     }
   };
 
   const handleAssembleVideos = async () => {
+    if (!videoGenerationId) return;
     setPhase('assembling');
+    setExportError(null);
+    setAssemblyJobId(null);
     setProgress(0);
-
     try {
       const { data, error } = await supabase.functions.invoke('assemble-final-videos', {
-        body: {
-          videoGenerationId,
-          platforms: formData.platforms,
-          includeVoiceover: formData.includeVoiceover,
-          includeMusic: formData.includeMusic,
+        body: assemblyRequest(videoGenerationId, {
+          duration: formData.duration, style: formData.style, platforms: formData.platforms,
+          includeVoiceover: formData.includeVoiceover, includeMusic: formData.includeMusic,
           includeLogo: formData.includeLogo,
-        },
+        }),
       });
-
       if (error) throw error;
-
-      setPlatformVideos(data.videos);
-      setProgress(100);
-      setPhase('completed');
-
-      toast({
-        title: 'Videos Generated Successfully!',
-        description: `${data.videos.length} platform-optimized videos are ready.`,
-      });
-    } catch (error: any) {
-      toast({
-        title: 'Assembly Failed',
-        description: error.message,
-        variant: 'destructive',
-      });
+      if (!data?.jobId) throw new Error('Export did not return a job ID');
+      if (mounted.current) setAssemblyJobId(data.jobId);
+    } catch (error) {
+      if (mounted.current) setExportError(error instanceof Error ? error.message : 'Assembly failed');
     }
   };
 
@@ -284,13 +337,13 @@ export function StoryGenerateStep({ formData, onBack, onComplete, previewMode = 
         return (
           <StoryboardReview
             scenes={scenes}
-            onGenerateFullStory={handleApproveImagesAndGenerateVideos}
+            onGenerateFullStory={() => handleApproveImagesAndGenerateVideos()}
             estimatedCost={scenes.length * 0.48}
             estimatedTime={Math.ceil(scenes.length * 2.5)}
           />
         );
 
-      case 'generating_videos':
+      case 'review_videos':
         return (
           <VideoClipReview
             scenes={scenes.filter(s => s.image_url).map(s => ({
@@ -323,6 +376,12 @@ export function StoryGenerateStep({ formData, onBack, onComplete, previewMode = 
         );
 
       case 'generating_audio':
+        if (exportError) return (
+          <div className="space-y-4" role="alert">
+            <p>{exportError}</p>
+            <Button onClick={handleGenerateAudio}>Retry Audio</Button>
+          </div>
+        );
         return (
           <div className="text-center py-12">
             <Loader2 className="w-16 h-16 animate-spin mx-auto mb-4 text-primary" />
@@ -335,7 +394,13 @@ export function StoryGenerateStep({ formData, onBack, onComplete, previewMode = 
         );
 
       case 'assembling':
-        return <FinalAssemblyStatus isAssembling={true} onComplete={onComplete} />;
+        return exportError ? (
+          <div className="space-y-4" role="alert">
+            <p>{exportError}</p>
+            <Button onClick={() => setExportError(null)} disabled={!assemblyJobId}>Check Status Again</Button>
+            <Button variant="outline" onClick={handleAssembleVideos}>Retry Export</Button>
+          </div>
+        ) : <FinalAssemblyStatus isAssembling={true} onComplete={onComplete} />;
 
       case 'completed':
         return (

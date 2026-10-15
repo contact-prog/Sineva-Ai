@@ -6,7 +6,7 @@ import { planScenes } from '../_shared/video-scene-planner.ts';
 import { generateSceneImages } from '../_shared/video-image-generator.ts';
 import { generateVideoClips } from '../_shared/video-clip-generator.ts';
 import { generateAudioLayers } from '../_shared/video-audio-generator.ts';
-import { assembleVideos } from '../_shared/video-assembler.ts';
+import { enqueueVideoAssembly } from '../_shared/video-assembler.ts';
 
 declare const EdgeRuntime: { waitUntil(promise: Promise<unknown>): void };
 
@@ -243,8 +243,12 @@ serve(async (req) => {
             .single();
           
           logoUrl = profile?.logo_url;
+          if (!logoUrl) throw new Error('Upload a logo before requesting a logo overlay');
           console.log('Logo URL:', logoUrl || 'none');
         }
+
+        if (body.includeVoiceover && !audioLayers.voiceoverUrl) throw new Error('Voiceover generation did not produce audio');
+        if (body.includeMusic && !audioLayers.musicUrl) throw new Error('Music generation did not produce audio');
 
         // Stage 6: Assemble final videos
         console.log('[Stage 6/6] Assembling final videos for platforms...');
@@ -253,48 +257,19 @@ serve(async (req) => {
           .update({ metadata: { ...videoRecord.metadata, stage: 'assembling_videos' } })
           .eq('id', videoRecord.id);
 
-        const finalVideos = await assembleVideos({
-          videoClips,
-          audioLayers,
-          platforms: body.platforms,
-          duration: body.duration,
-          logoUrl,
-          style: body.style,
-          supabaseUrl,
-          supabaseKey
-        });
-
-        console.log(`Assembled ${finalVideos.length} final videos`);
-
-        // Calculate costs
-        const primaryVideo = finalVideos[0];
-        const totalTime = Date.now() - startTime;
-        
+        // Account for generation before handing assembly to the durable worker.
         const sceneCost = videoClips.reduce((sum, clip) => sum + clip.cost, 0);
-        const voiceoverCost = body.includeVoiceover ? 0.05 : 0;
-        const planningCost = 0.02;
-        const imageCost = scenes.length * 0.05;
-        const assemblyCost = body.platforms.length * 0.50;
-        const totalCost = sceneCost + voiceoverCost + planningCost + imageCost + assemblyCost;
-
-        // Final update with completion
-        await supabase
-          .from('video_generations')
-          .update({
-            status: 'completed',
-            video_url: primaryVideo.url,
-            thumbnail_url: primaryVideo.thumbnailUrl,
-            cost_usd: totalCost,
-            generation_time_seconds: Math.floor(totalTime / 1000),
-            metadata: {
-              ...videoRecord.metadata,
-              stage: 'completed',
-              generationTimeMs: totalTime,
-              numScenes: scenes.length,
-              finalVideos: finalVideos
-            }
-          })
-          .eq('id', videoRecord.id);
+        const totalCost = sceneCost + (body.includeVoiceover ? 0.05 : 0) + 0.02 +
+          scenes.length * 0.05 + body.platforms.length * 0.50;
+        const { error: costError } = await supabase.from('video_generations')
+          .update({ cost_usd: totalCost }).eq('id', videoRecord.id);
+        if (costError) throw costError;
+        const jobId = await enqueueVideoAssembly({
+          videoGenerationId: videoRecord.id,
+          videoClips, audioLayers, platforms: body.platforms, duration: body.duration,
+          logoUrl, style: body.style, supabaseUrl, supabaseKey,
+        });
+        console.log('Queued final video assembly:', jobId);
 
         // Increment usage counter
         await supabase.functions.invoke('increment-usage', {
@@ -304,9 +279,9 @@ serve(async (req) => {
             creditsUsed: 1,
             metadata: { duration: body.duration, numScenes: scenes.length, platforms: body.platforms.length }
           }
-        });
+        }).catch(error => console.error('Usage accounting failed after export enqueue:', error));
 
-        console.log(`Story video generation completed in ${totalTime}ms, cost: $${totalCost.toFixed(2)}`);
+        console.log(`Story generation queued for export, cost: $${totalCost.toFixed(2)}`);
 
       } catch (error: any) {
         console.error('Background story generation error:', error);

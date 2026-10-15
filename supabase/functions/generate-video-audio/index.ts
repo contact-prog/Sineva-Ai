@@ -50,6 +50,13 @@ serve(async (req) => {
 
     const { videoGenerationId, includeVoiceover, includeMusic, style, duration }: GenerateAudioRequest = await req.json();
 
+    const { data: generation, error: generationError } = await supabaseClient
+      .from('video_generations').select('id').eq('id', videoGenerationId).eq('user_id', user.id).maybeSingle();
+    if (generationError) throw generationError;
+    if (!generation) return new Response(JSON.stringify({ error: 'Video not found' }), {
+      status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+
     console.log('Generating audio for video generation:', videoGenerationId);
 
     if (!includeVoiceover && !includeMusic) {
@@ -108,7 +115,7 @@ serve(async (req) => {
     console.log('Audio generation complete');
 
     // Update video generation with audio URLs
-    await supabaseClient
+    const { error: saveError } = await supabaseClient
       .from('video_generations')
       .update({ 
         status: 'audio_generated',
@@ -118,6 +125,7 @@ serve(async (req) => {
       })
       .eq('id', videoGenerationId);
 
+    if (saveError) throw saveError;
     return new Response(
       JSON.stringify({ 
         success: true, 
