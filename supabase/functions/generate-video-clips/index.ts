@@ -47,6 +47,13 @@ serve(async (req) => {
 
     const { videoGenerationId, veoModel }: GenerateClipsRequest = await req.json();
 
+    const { data: generation, error: generationError } = await supabaseClient
+      .from('video_generations').select('id').eq('id', videoGenerationId).eq('user_id', user.id).maybeSingle();
+    if (generationError) throw generationError;
+    if (!generation) return new Response(JSON.stringify({ error: 'Video not found' }), {
+      status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+
     console.log('Generating video clips for:', videoGenerationId, 'using model:', veoModel);
 
     // Get scenes with generated images
@@ -54,12 +61,12 @@ serve(async (req) => {
       .from('video_story_scenes')
       .select('*')
       .eq('video_generation_id', videoGenerationId)
-      .eq('status', 'image_approved')
       .order('scene_number');
 
     if (scenesError) throw scenesError;
-    if (!scenes || scenes.length === 0) {
-      throw new Error('No approved scene images found');
+    // This endpoint is invoked only after the UI's explicit cost approval.
+    if (!scenes?.length || scenes.some(scene => !scene.image_url)) {
+      throw new Error('Every scene must have a generated image before clip generation');
     }
 
     // Update status to generating_videos
@@ -107,7 +114,7 @@ serve(async (req) => {
     for (const videoClip of videoClips) {
       const scene = scenes.find(s => s.scene_number === videoClip.sceneNumber);
       if (scene) {
-        await supabaseClient
+        const { error: saveError } = await supabaseClient
           .from('video_story_scenes')
           .update({ 
             video_clip_url: videoClip.videoUrl,
@@ -117,11 +124,12 @@ serve(async (req) => {
             generation_cost: videoClip.cost,
           })
           .eq('id', scene.id);
+        if (saveError) throw saveError;
       }
     }
 
     // Update video generation status and cost
-    await supabaseClient
+    const { error: saveError } = await supabaseClient
       .from('video_generations')
       .update({ 
         status: 'videos_generated',
@@ -131,6 +139,7 @@ serve(async (req) => {
       })
       .eq('id', videoGenerationId);
 
+    if (saveError) throw saveError;
     return new Response(
       JSON.stringify({ 
         success: true, 

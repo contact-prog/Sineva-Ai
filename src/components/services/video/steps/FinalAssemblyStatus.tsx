@@ -1,14 +1,10 @@
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Check, Download, Share2, Loader2 } from 'lucide-react';
+import { Check, Download, Loader2 } from 'lucide-react';
 import { AspectRatio } from '@/components/ui/aspect-ratio';
 
-interface PlatformVideo {
-  platform: string;
-  url: string;
-  format: string;
-}
+import type { PlatformVideo } from './videoExport';
 
 interface FinalAssemblyStatusProps {
   isAssembling: boolean;
@@ -57,11 +53,13 @@ export function FinalAssemblyStatus({
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {videos.map((video, index) => (
           <Card key={index} className="overflow-hidden">
-            <AspectRatio ratio={16/9} className="bg-muted">
+            <AspectRatio ratio={Number(video.aspectRatio.split(':')[0]) / Number(video.aspectRatio.split(':')[1]) || 16 / 9} className="bg-muted">
               <video 
                 controls
-                className="w-full h-full object-cover"
+                className="w-full h-full object-contain"
                 src={video.url}
+                poster={video.thumbnailUrl}
+                preload="metadata"
               >
                 Your browser does not support the video element.
               </video>
@@ -74,24 +72,15 @@ export function FinalAssemblyStatus({
                 </div>
               </div>
               <div className="flex gap-2">
-                {onDownload && (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => onDownload(video.url, video.platform)}
-                    className="flex-1 gap-2"
+                <Button size="sm" variant="outline" className="flex-1 gap-2" asChild>
+                  <a
+                    href={`${video.url}${video.url.includes('?') ? '&' : '?'}download=${encodeURIComponent(`sineva-${video.platform}.mp4`)}`}
+                    download={`sineva-${video.platform}.mp4`}
+                    onClick={onDownload ? (event) => { event.preventDefault(); onDownload(video.url, video.platform); } : undefined}
                   >
                     <Download className="w-4 h-4" />
                     Download
-                  </Button>
-                )}
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="flex-1 gap-2"
-                >
-                  <Share2 className="w-4 h-4" />
-                  Share
+                  </a>
                 </Button>
               </div>
             </div>
